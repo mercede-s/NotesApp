@@ -1,5 +1,6 @@
 package com.example.notesapp;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -13,12 +14,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NoteAdapter.OnNoteClickListener {
     private ArrayList<Note> notes;
     private NoteAdapter adapter;
     private RecyclerView notesRecyclerView;
-
-    private ActivityResultLauncher<Intent> addNoteLauncher;
+    private ActivityResultLauncher<Intent> editNoteLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,26 +26,31 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Initialize the notes list and set up the ListView with an adapter
+        //Initialize the notes list and set up the RecyclerView with an adapter
         notes = new ArrayList<>();
         notesRecyclerView = findViewById(R.id.notesRecyclerView);
-        adapter = new NoteAdapter(notes);
-        notesRecyclerView.setAdapter(adapter);
         notesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new NoteAdapter(notes, this); // this = onclick listener??
+        notesRecyclerView.setAdapter(adapter);
 
         //Initialize ActivityResultLauncher for NoteActivity
-        addNoteLauncher = registerForActivityResult(
+        editNoteLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     //Handle the result from NoteActivity
                     if(result.getResultCode() == RESULT_OK && result.getData() != null) {
-
-                        //Add the new note to the list and update the adapter
+                        int position = result.getData().getIntExtra("notePosition", -1);
                         String noteText = result.getData().getStringExtra("noteText");
-                        Note newNote = new Note(noteText);
-                        adapter.addNote(newNote);
-                        //adapter.notifyDataSetChanged(); //try it in a UI thread if not working
-                        System.out.println("1. " + notes.get(0).getText() + " received and added to notes ArrayList");
+                        if (noteText != null) {
+                            if (position == notes.size()) {
+                                Note newOrUpdatedNote = new Note(noteText);
+                                adapter.addNote(newOrUpdatedNote);
+                            }
+                            else {
+                                Note newOrUpdatedNote = new Note(noteText);
+                                adapter.updateNote(position, newOrUpdatedNote);
+                            }
+                        }
                     }
                 }
         );
@@ -55,26 +60,33 @@ public class MainActivity extends AppCompatActivity {
         addNoteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v){
-                //Launch NoteActivity and create a new note
+                //Calculate the new notes position
+                int newPosition = notes.size();
+
                 Intent intent = new Intent(MainActivity.this, NoteActivity.class);
-                addNoteLauncher.launch(intent);
-               //startActivity(intent); // onActivityResult implementation
+
+                //Send new position to NoteActivity
+                intent.putExtra("notePosition", newPosition);
+                //here - calculate size of current list and send that info through with the intent
+                editNoteLauncher.launch(intent);
             }
         });
     }
 
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//
-//        System.out.println("OnActivityResult called");
-//        System.out.println(requestCode + ", " + resultCode + ", " + data);
-//
-//        if (requestCode == 1 && resultCode == RESULT_OK) {
-//            String noteText = data.getStringExtra("noteText");
-//            notes.add(new Note(noteText));
-//            adapter.add(noteText);
-//            adapter.notifyDataSetChanged();
-//        }
-//    }
+    @Override
+    public void onNoteClick(int position) {
+        Intent intent = new Intent(this, NoteActivity.class);
+        intent.putExtra("noteText", notes.get(position).getText());
+        intent.putExtra("notePosition", position);
+        editNoteLauncher.launch(intent);
+    }
+
+    @Override
+    public void onNoteLongClick(int position) {
+        new AlertDialog.Builder(this).setTitle("Delete Note")
+                .setMessage("Are you sure you want to delete this note?")
+                .setPositiveButton("Yes", ((dialog, which) -> {
+                    adapter.removeNote(position);
+                })).setNegativeButton("No", null).show();
+    }
 }
