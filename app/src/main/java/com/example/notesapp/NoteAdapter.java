@@ -3,7 +3,6 @@ package com.example.notesapp;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,12 +21,16 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     @NonNull
     @Override
     public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+
+        //Inflate the layout for each note item
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.note_item, parent, false);
         return new NoteViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
+
+        //Set the note text for the current item in the list
         Note note = notes.get(position);
         holder.noteTextView.setText(note.getText());
     }
@@ -37,18 +40,25 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return notes.size();
     }
 
+    //Adds a new note to the list
     public void addNote(Note newNote) {
         notes.add(newNote);
-        notifyItemInserted(notes.size()-1);
+        //Notify adapter of change
+        notifyItemInserted(notes.size());
     }
 
-    public void updateNote(int index, Note newNote) {
-        notes.set(index, newNote);
-        notifyItemChanged(index);
+    //Updates an existing note
+    public void updateNote(int position, Note newNote) {
+        notes.set(position, newNote);
+        //Notify adapter of change
+
+        notifyItemChanged(position);
     }
 
+    //Removes a note from the list
     public void removeNote(int position) {
         notes.remove(position);
+        //Notify adapter of change
         notifyItemRemoved(position);
     }
 
@@ -59,16 +69,15 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             super(itemView);
             noteTextView = itemView.findViewById(R.id.noteTextView);
 
-            //Click listener for editing
+            //Click listener for editing a note
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION) {
-
                     onNoteClickListener.onNoteClick(position);
                 }
             });
 
-            //LongClick listener for deleting
+            //LongClick listener for deleting a note
             itemView.setOnLongClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION) {
@@ -79,6 +88,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         }
     }
 
+    //Interface for handling click and long-click events
     public interface OnNoteClickListener {
         void onNoteClick(int position);
         void onNoteLongClick(int position);
